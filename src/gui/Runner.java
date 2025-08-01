@@ -5,7 +5,6 @@ import javax.swing.event.*;
 import net.miginfocom.swing.MigLayout;
 import java.awt.*;
 import java.io.File;
-import java.io.IOException;
 
 public class Runner {
   private static String[] command = {
@@ -72,7 +71,7 @@ public class Runner {
     chooseButton.addActionListener(e -> chooseFolder());// パス選択アクションの呼び出し
 
     JButton runButton = new JButton("実行");
-    runButton.addActionListener(e -> executeCommand());// 実行アクションの呼び出し
+    runButton.addActionListener(e -> executeCommand().execute());// 実行アクションの呼び出し
 
     JPanel formpanel = new JPanel(new MigLayout("", "[right][grow]", "[][][]"));
     formpanel.add(new JLabel("URL："));
@@ -111,14 +110,37 @@ public class Runner {
   }
 
   /* 実行ボタンアクション */
-  private void executeCommand() {
-    try {
-      ProcessBuilder builder = new ProcessBuilder("cmd", "/c", String.join(" ", command));
-      builder.directory(new File(pathField.getText()));
-      builder.start();
-    } catch (IOException ex) {
-      ex.printStackTrace();
-      JOptionPane.showMessageDialog(frame, "コマンド実行中にエラーが発生しました。", "エラー", JOptionPane.ERROR_MESSAGE);
-    }
+  private SwingWorker<Void, Void> executeCommand() {
+    return new SwingWorker<>() {
+      private Exception error = null;
+      private int exitCode = 0;
+
+      @Override
+      protected Void doInBackground() {
+        try {
+          ProcessBuilder builder = new ProcessBuilder("cmd", "/c", String.join(" ", command));
+          builder.directory(new File(pathField.getText()));
+          Process process = builder.start();
+          exitCode = process.waitFor();
+        } catch (Exception ex) {
+          error = ex;
+        }
+        return null;
+      }
+
+      @Override
+      protected void done() {
+        if (error != null) {
+          JOptionPane.showMessageDialog(frame, "コマンド実行に失敗しました。\n" + error.getMessage(), "エラー",
+              JOptionPane.ERROR_MESSAGE);
+        } else if (exitCode != 0) {
+          JOptionPane.showMessageDialog(frame, "コマンド実行中にエラーが発生しました。\n終了コード: " + exitCode, "エラー",
+              JOptionPane.ERROR_MESSAGE);
+        } else {
+          JOptionPane.showMessageDialog(frame, "ダウンロードに成功しました", "完了", JOptionPane.INFORMATION_MESSAGE);
+        }
+      }
+    };
   }
+
 }
