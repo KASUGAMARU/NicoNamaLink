@@ -15,6 +15,7 @@ public class Runner {
   private JTextField urlField, usersessionField, filenameField, pathField;
   private JTextArea outputArea;
   private JFrame frame;
+  JProgressBar progressBar;
 
   public static void main(String args[]) {
     SwingUtilities.invokeLater(() -> new Runner().initUI());
@@ -54,6 +55,9 @@ public class Runner {
     outputArea = new JTextArea(5, 40);// 5.コマンドを表示する
     outputArea.setLineWrap(true);// 折り返すようにする
     outputArea.setText(String.join(" ", command));// 初期値を表示する
+    progressBar = new JProgressBar();//6.プログレスバー追加
+    progressBar.setPreferredSize(new Dimension(450, 20)); 
+    progressBar.setIndeterminate(false);
 
     /* 入力の変更を監視するリスナー */
     DocumentListener formListener = new DocumentListener() {
@@ -86,6 +90,7 @@ public class Runner {
     formpanel.add(new JLabel("出力コマンド："));
     formpanel.add(outputArea, "wrap");
     formpanel.add(runButton, "skip, wrap");
+    formpanel.add(progressBar, "skip, wrap");
     return formpanel;
   }
 
@@ -118,6 +123,7 @@ public class Runner {
       @Override
       protected Void doInBackground() {
         try {
+          progressBar.setIndeterminate(true);
           ProcessBuilder builder = new ProcessBuilder("cmd", "/c", String.join(" ", command));
           builder.directory(new File(pathField.getText()));
           Process process = builder.start();
@@ -130,6 +136,7 @@ public class Runner {
 
       @Override
       protected void done() {
+        progressBar.setIndeterminate(false);
         if (error != null) {
           JOptionPane.showMessageDialog(frame, "コマンド実行に失敗しました。\n" + error.getMessage(), "エラー",
               JOptionPane.ERROR_MESSAGE);
