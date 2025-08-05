@@ -4,18 +4,23 @@ import javax.swing.*;
 import javax.swing.event.*;
 import net.miginfocom.swing.MigLayout;
 import java.awt.*;
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public class Runner {
   private static String[] command = {
-      "streamlink", "URL", " best",
+      "streamlink", "--loglevel", "debug", "URL", " best",
       "--niconico-user-session", "ユーザーセッション", " --output", "ファイル名.mp4"
   };
 
   private JTextField urlField, usersessionField, filenameField, pathField;
   private JTextArea outputArea;
   private JFrame frame;
+  private JProgressBar progressBar;
+  private JLabel progress;
 
   public static void main(String args[]) {
     SwingUtilities.invokeLater(() -> new Runner().initUI());
@@ -55,6 +60,10 @@ public class Runner {
     outputArea = new JTextArea(5, 40);// 5.コマンドを表示する
     outputArea.setLineWrap(true);// 折り返すようにする
     outputArea.setText(String.join(" ", command));// 初期値を表示する
+    progress = new JLabel("進捗：");
+    progressBar = new JProgressBar();//6.プログレスバー追加
+    progressBar.setPreferredSize(new Dimension(450, 20)); 
+    progressBar.setIndeterminate(false);
 
     /* 入力の変更を監視するリスナー */
     DocumentListener formListener = new DocumentListener() {
@@ -72,7 +81,7 @@ public class Runner {
     chooseButton.addActionListener(e -> chooseFolder());// パス選択アクションの呼び出し
 
     JButton runButton = new JButton("実行");
-    runButton.addActionListener(e -> executeCommand());// 実行アクションの呼び出し
+    runButton.addActionListener(e -> executeCommand().execute());// 実行アクションの呼び出し
 
     JPanel formpanel = new JPanel(new MigLayout("", "[right][grow]", "[][][]"));
     formpanel.add(new JLabel("URL："));
@@ -87,14 +96,16 @@ public class Runner {
     formpanel.add(new JLabel("出力コマンド："));
     formpanel.add(outputArea, "wrap");
     formpanel.add(runButton, "skip, wrap");
+    formpanel.add(progress, "skip, wrap");
+    formpanel.add(progressBar, "skip, wrap");
     return formpanel;
   }
 
   /* 変更を検知した際の処理 */
   private void updateCommand() {
-    command[1] = urlField.getText().trim();
-    command[4] = usersessionField.getText().trim();
-    command[6] = "\"" + filenameField.getText().trim() + ".mp4\"";
+    command[3] = urlField.getText().trim();
+    command[6] = usersessionField.getText().trim();
+    command[8] = "\"" + filenameField.getText().trim() + ".mp4\"";
     outputArea.setText(String.join(" ", command));
   }
 
@@ -111,14 +122,52 @@ public class Runner {
   }
 
   /* 実行ボタンアクション */
-  private void executeCommand() {
-    try {
-      ProcessBuilder builder = new ProcessBuilder("cmd", "/c", String.join(" ", command));
-      builder.directory(new File(pathField.getText()));
-      builder.start();
-    } catch (IOException ex) {
-      ex.printStackTrace();
-      JOptionPane.showMessageDialog(frame, "コマンド実行中にエラーが発生しました。", "エラー", JOptionPane.ERROR_MESSAGE);
-    }
+  private SwingWorker<Void, String> executeCommand() {
+    return new SwingWorker<>() {
+      private Exception error = null;
+      private int exitCode = 0;
+
+      @Override
+      protected Void doInBackground() {
+        try {
+          progressBar.setIndeterminate(true);
+          ProcessBuilder builder = new ProcessBuilder("cmd", "/c", String.join(" ", command));
+          builder.directory(new File(pathField.getText()));
+          Process process = builder.start();
+          BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+          String line;
+          while((line = reader.readLine()) != null){
+            if(line.contains("Segment") && line.contains("complete")){
+              publish(line);
+            }
+          }
+          exitCode = process.waitFor();
+        } catch (Exception ex) {
+          error = ex;
+        }
+        return null;
+      }
+
+      @Override
+      protected void process(List<String> chunks) {
+        String latest = chunks.get(chunks.size()-1);//最新の1行を抽出
+        progress.setText("進捗：" + latest.substring(20));
+      }
+
+      @Override
+      protected void done() {
+        progressBar.setIndeterminate(false);
+        if (error != null) {
+          JOptionPane.showMessageDialog(frame, "コマンド実行に失敗しました。\n" + error.getMessage(), "エラー",
+              JOptionPane.ERROR_MESSAGE);
+        } else if (exitCode != 0) {
+          JOptionPane.showMessageDialog(frame, "コマンド実行中にエラーが発生しました。\n終了コード: " + exitCode, "エラー",
+              JOptionPane.ERROR_MESSAGE);
+        } else {
+          JOptionPane.showMessageDialog(frame, "ダウンロードに成功しました", "完了", JOptionPane.INFORMATION_MESSAGE);
+        }
+      }
+    };
   }
+
 }
