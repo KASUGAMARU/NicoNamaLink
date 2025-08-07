@@ -80,6 +80,9 @@ public class Runner {
     JButton chooseButton = new JButton("パス選択");
     chooseButton.addActionListener(e -> chooseFolder());// パス選択アクションの呼び出し
 
+    JButton saveButton = new JButton("データ保存");
+    saveButton.addActionListener(e -> SaveService.saveDataServie(usersessionField.getText().trim(),pathField.getText().trim()));// 実行アクションの呼び出し
+
     JButton runButton = new JButton("実行");
     runButton.addActionListener(e -> executeCommand().execute());// 実行アクションの呼び出し
 
@@ -95,6 +98,7 @@ public class Runner {
     formpanel.add(chooseButton, "wrap");
     formpanel.add(new JLabel("出力コマンド："));
     formpanel.add(outputArea, "wrap");
+    formpanel.add(saveButton, "skip, wrap");
     formpanel.add(runButton, "skip, wrap");
     formpanel.add(progress, "skip, wrap");
     formpanel.add(progressBar, "skip, wrap");
