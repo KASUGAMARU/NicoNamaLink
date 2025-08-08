@@ -2,7 +2,11 @@ package gui;
 
 import javax.swing.*;
 import javax.swing.event.*;
+
+import model.Settings;
 import net.miginfocom.swing.MigLayout;
+import service.*;
+
 import java.awt.*;
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,13 +54,14 @@ public class Runner {
     titlepanel.add(iconlabel);
     return titlepanel;
   }
+  Settings loaded = LoadService.loadDataService();
 
   /* フォームとボタン */
   private JPanel createFormPanel() {
     urlField = new JTextField(40);// 1.URL入力
-    usersessionField = new JTextField(40);// 2.ユーザーセッション入力
+    usersessionField = new JTextField(loaded.getSession(),40);// 2.ユーザーセッション入力
     filenameField = new JTextField(40);// 3.ファイル名入力
-    pathField = new JTextField(40); // 4.パスを表示する
+    pathField = new JTextField(loaded.getPath(),40); // 4.パスを表示する
     outputArea = new JTextArea(5, 40);// 5.コマンドを表示する
     outputArea.setLineWrap(true);// 折り返すようにする
     outputArea.setText(String.join(" ", command));// 初期値を表示する
@@ -80,6 +85,9 @@ public class Runner {
     JButton chooseButton = new JButton("パス選択");
     chooseButton.addActionListener(e -> chooseFolder());// パス選択アクションの呼び出し
 
+    JButton saveButton = new JButton("ユーザーセッションとパスの保存");
+    saveButton.addActionListener(e -> SaveService.saveDataServie(usersessionField.getText().trim(),pathField.getText().trim()));// 実行アクションの呼び出し
+
     JButton runButton = new JButton("実行");
     runButton.addActionListener(e -> executeCommand().execute());// 実行アクションの呼び出し
 
@@ -95,6 +103,7 @@ public class Runner {
     formpanel.add(chooseButton, "wrap");
     formpanel.add(new JLabel("出力コマンド："));
     formpanel.add(outputArea, "wrap");
+    formpanel.add(saveButton, "skip, wrap");
     formpanel.add(runButton, "skip, wrap");
     formpanel.add(progress, "skip, wrap");
     formpanel.add(progressBar, "skip, wrap");
