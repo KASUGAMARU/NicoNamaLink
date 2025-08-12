@@ -1,18 +1,36 @@
-## Getting Started
+# ニコ生ダウンロードツール
+StreamLinkを使用してニコニコ生放送のタイムシフト放送のダウンロードをGUI操作で行うアプリケーションです。
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+## 事前インストール
+このアプリを使用するためには「**StreamLink**」のインストールが必要です。  
+https://streamlink.github.io/index.html  
+また、「**ffmpeg**」のインストールも必要になります。  
+https://ffmpeg.org/  
 
-## Folder Structure
+## クッキー情報の取得
+ニコニコ生放送のクッキー情報が必要です。  
+1. ニコニコ生放送のページにアクセス(https://live.nicovideo.jp/)  
+2. 開発者ツールを開く  
+3. 上記の複数あるタブから「アプリケーション」を選択する  
+4. 左に「ストレージ」の項目があるので、その中の「Cookie」を展開する  
+5. 展開して出てきた一番上の項目を押下する  
+6. フィルタで「user_session」を検索する  
+7. 検索で一番上にヒットした「値」がクッキー情報です。  
 
-The workspace contains two folders by default, where:
+## 使い方
+必要な値を入れて実行すればダウンロードできます  
+  
+ユーザーセッションとパスを毎回入れるのが面倒になったら  
+入力した状態で「ユーザーセッションとパスの保存」ボタンを押下することで保存ができます  
 
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
 
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
+## 注意点
+- ### 以下の文字はファイル名に使えません
+  **\ / : * ? " < > |**  
+  これらのファイルを使用した場合正常にダウンロードできません。  
 
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
+- ### dataフォルダ、saves.jsonは削除、移動をしないでください
+  ユーザーセッションとパスの保存に使う為、削除、移動をしないで下さい。
 
-## Dependency Management
-
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+- ### ダウンロードの前に再生ボタンを押してください
+  ダウンロード時にエラーの原因になります。  
