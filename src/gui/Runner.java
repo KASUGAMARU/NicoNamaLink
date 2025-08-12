@@ -8,6 +8,9 @@ import net.miginfocom.swing.MigLayout;
 import service.*;
 
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -55,13 +58,18 @@ public class Runner {
     return titlepanel;
   }
   Settings loaded = LoadService.loadDataService();
+  FocusListener listener = new SelectAllOnFocusListener();
 
   /* フォームとボタン */
   private JPanel createFormPanel() {
     urlField = new JTextField(40);// 1.URL入力
+    urlField.addFocusListener(listener);
     usersessionField = new JTextField(loaded.getSession(),40);// 2.ユーザーセッション入力
+    usersessionField.addFocusListener(listener);
     filenameField = new JTextField(40);// 3.ファイル名入力
+    filenameField.addFocusListener(listener);
     pathField = new JTextField(loaded.getPath(),40); // 4.パスを表示する
+    pathField.addFocusListener(listener);
     outputArea = new JTextArea(5, 40);// 5.コマンドを表示する
     outputArea.setLineWrap(true);// 折り返すようにする
     outputArea.setText(String.join(" ", command));// 初期値を表示する
@@ -109,6 +117,16 @@ public class Runner {
     formpanel.add(progressBar, "skip, wrap");
     return formpanel;
   }
+
+  private static class SelectAllOnFocusListener extends FocusAdapter{
+    @Override
+    public void focusGained(FocusEvent e){
+      Component c = e.getComponent();
+      if(c instanceof JTextField textField){
+        textField.selectAll();
+      }
+    }
+  }  
 
   /* 変更を検知した際の処理 */
   private void updateCommand() {
