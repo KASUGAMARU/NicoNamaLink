@@ -3,14 +3,13 @@ package gui;
 import javax.swing.*;
 import javax.swing.event.*;
 
+import model.CommandBuilder;
 import model.Settings;
 import net.miginfocom.swing.MigLayout;
 import service.*;
 
 import java.awt.*;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
+import java.awt.event.*;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -18,16 +17,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class Runner {
-  private static String[] command = {
-      "streamlink", "--loglevel", "debug", "URL", " best",
-      "--niconico-user-session", "ユーザーセッション", " --output", "ファイル名.mp4"
-  };
+  private final CommandBuilder commandBuilder = new CommandBuilder();
 
   private JTextField urlField, usersessionField, filenameField, pathField;
   private JTextArea outputArea;
   private JFrame frame;
   private JProgressBar progressBar;
   private JLabel progress;
+  private JCheckBox ffmpegCheck, deleteTemp;
 
   public static void main(String args[]) {
     SwingUtilities.invokeLater(() -> new Runner().initUI());
@@ -57,6 +54,7 @@ public class Runner {
     titlepanel.add(iconlabel);
     return titlepanel;
   }
+
   Settings loaded = LoadService.loadDataService();
   FocusListener listener = new SelectAllOnFocusListener();
 
@@ -64,37 +62,56 @@ public class Runner {
   private JPanel createFormPanel() {
     urlField = new JTextField(40);// 1.URL入力
     urlField.addFocusListener(listener);
-    usersessionField = new JTextField(loaded.getSession(),40);// 2.ユーザーセッション入力
+    usersessionField = new JTextField(loaded.getSession(), 40);// 2.ユーザーセッション入力
     usersessionField.addFocusListener(listener);
     filenameField = new JTextField(40);// 3.ファイル名入力
     filenameField.addFocusListener(listener);
-    pathField = new JTextField(loaded.getPath(),40); // 4.パスを表示する
+    pathField = new JTextField(loaded.getPath(), 40); // 4.パスを表示する
     pathField.addFocusListener(listener);
     outputArea = new JTextArea(5, 40);// 5.コマンドを表示する
     outputArea.setLineWrap(true);// 折り返すようにする
-    outputArea.setText(String.join(" ", command));// 初期値を表示する
+    outputArea.setText("値を入力してコマンドを生成する");// 初期値を表示する
+    outputArea.setEditable(false);//読み取り専用にする
     progress = new JLabel("進捗：");
-    progressBar = new JProgressBar();//6.プログレスバー追加
-    progressBar.setPreferredSize(new Dimension(450, 20)); 
+    progressBar = new JProgressBar();// 6.プログレスバー追加
+    progressBar.setPreferredSize(new Dimension(450, 20));
     progressBar.setIndeterminate(false);
+    ffmpegCheck = new JCheckBox("ffmpegでmp4で出力する", true);
+    deleteTemp = new JCheckBox("一時ファイルを削除する", true);
 
     /* 入力の変更を監視するリスナー */
     DocumentListener formListener = new DocumentListener() {
-      public void insertUpdate(DocumentEvent e) { updateCommand(); }
-      public void removeUpdate(DocumentEvent e) { updateCommand(); }
-      public void changedUpdate(DocumentEvent e) { updateCommand(); }
+      public void insertUpdate(DocumentEvent e) {
+        updateCommand();
+      }
 
+      public void removeUpdate(DocumentEvent e) {
+        updateCommand();
+      }
+
+      public void changedUpdate(DocumentEvent e) {
+        updateCommand();
+      }
     };
+    ItemListener checkBoxListener = new ItemListener() {
+      public void itemStateChanged(ItemEvent e) {
+        updateCommand();
+      }
+    };
+
     /* リスナーの登録 */
     urlField.getDocument().addDocumentListener(formListener);
     usersessionField.getDocument().addDocumentListener(formListener);
     filenameField.getDocument().addDocumentListener(formListener);
+    ffmpegCheck.addItemListener(checkBoxListener);
+    deleteTemp.addItemListener(checkBoxListener);
 
     JButton chooseButton = new JButton("パス選択");
     chooseButton.addActionListener(e -> chooseFolder());// パス選択アクションの呼び出し
 
     JButton saveButton = new JButton("ユーザーセッションとパスの保存");
-    saveButton.addActionListener(e -> SaveService.saveDataServie(usersessionField.getText().trim(),pathField.getText().trim()));// 実行アクションの呼び出し
+    saveButton.addActionListener(
+        e -> SaveService.saveDataServie(usersessionField.getText().trim(), pathField.getText().trim()));// 実行アクションの呼び出し
 
     JButton runButton = new JButton("実行");
     runButton.addActionListener(e -> executeCommand().execute());// 実行アクションの呼び出し
@@ -111,6 +128,8 @@ public class Runner {
     formpanel.add(chooseButton, "wrap");
     formpanel.add(new JLabel("出力コマンド："));
     formpanel.add(outputArea, "wrap");
+    formpanel.add(ffmpegCheck, "skip, wrap");
+    formpanel.add(deleteTemp, "skip, wrap");
     formpanel.add(saveButton, "skip, wrap");
     formpanel.add(runButton, "skip, wrap");
     formpanel.add(progress, "skip, wrap");
@@ -118,22 +137,31 @@ public class Runner {
     return formpanel;
   }
 
-  private static class SelectAllOnFocusListener extends FocusAdapter{
+  private static class SelectAllOnFocusListener extends FocusAdapter {
     @Override
-    public void focusGained(FocusEvent e){
+    public void focusGained(FocusEvent e) {
       Component c = e.getComponent();
-      if(c instanceof JTextField textField){
+      if (c instanceof JTextField textField) {
         textField.selectAll();
       }
     }
-  }  
+  }
 
   /* 変更を検知した際の処理 */
   private void updateCommand() {
-    command[3] = urlField.getText().trim();
-    command[6] = usersessionField.getText().trim();
-    command[8] = "\"" + filenameField.getText().trim() + ".mp4\"";
-    outputArea.setText(String.join(" ", command));
+    String url = urlField.getText().trim();
+    String session = usersessionField.getText().trim();
+    String filename = filenameField.getText().trim();
+    boolean useffmpeg = ffmpegCheck.isSelected();
+    boolean deleteTs = deleteTemp.isSelected();
+    if (!useffmpeg) {
+      deleteTemp.setEnabled(false);
+      deleteTemp.setSelected(false);
+    } else {
+      deleteTemp.setEnabled(true);
+    }
+    commandBuilder.commandUpdata(url, session, filename, useffmpeg, deleteTs);
+    outputArea.setText(String.join(" ", commandBuilder.getCommandAsString()));
   }
 
   /* フォルダ選択ボタンアクション */
@@ -154,30 +182,42 @@ public class Runner {
       private Exception error = null;
       private int exitCode = 0;
 
+      BufferedReader reader = null;
+
       @Override
       protected Void doInBackground() {
         try {
           progressBar.setIndeterminate(true);
-          ProcessBuilder builder = new ProcessBuilder("cmd", "/c", String.join(" ", command));
+          ProcessBuilder builder = new ProcessBuilder("cmd", "/c", String.join(" ", outputArea.getText()));
           builder.directory(new File(pathField.getText()));
+          builder.redirectErrorStream(true);
           Process process = builder.start();
-          BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+          reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
           String line;
-          while((line = reader.readLine()) != null){
-            if(line.contains("Segment") && line.contains("complete")){
+          while ((line = reader.readLine()) != null) {
+            if (line.contains("Segment") && line.contains("complete")) {
               publish(line);
             }
           }
           exitCode = process.waitFor();
         } catch (Exception ex) {
           error = ex;
+        } finally {
+          if (reader != null) {
+            try {
+              reader.close();
+            } catch (Exception e) {
+              e.printStackTrace();
+            }
+
+          }
         }
         return null;
       }
 
       @Override
       protected void process(List<String> chunks) {
-        String latest = chunks.get(chunks.size()-1);//最新の1行を抽出
+        String latest = chunks.get(chunks.size() - 1);// 最新の1行を抽出
         progress.setText("進捗：" + latest.substring(20));
       }
 
