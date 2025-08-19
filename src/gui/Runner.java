@@ -159,12 +159,14 @@ public class Runner {
     String session = usersessionField.getText().trim();
     String filename = filenameField.getText().trim();
     boolean useffmpeg = ffmpegCheck.isSelected();
-    boolean deleteTs = deleteTemp.isSelected();
+    boolean deleteTs;
     if (!useffmpeg) {
       deleteTemp.setEnabled(false);
       deleteTemp.setSelected(false);
+      deleteTs = false;
     } else {
       deleteTemp.setEnabled(true);
+      deleteTs = deleteTemp.isSelected();
     }
     commandBuilder.commandUpdata(url, session, filename, useffmpeg, deleteTs);
     outputArea.setText(String.join(" ", commandBuilder.getCommandAsString()));
