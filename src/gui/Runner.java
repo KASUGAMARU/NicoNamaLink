@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
 public class Runner {
   private final CommandBuilder commandBuilder = new CommandBuilder();
@@ -25,6 +26,7 @@ public class Runner {
   private JProgressBar progressBar;
   private JLabel progress;
   private JCheckBox ffmpegCheck, deleteTemp;
+  private JButton chooseButton,saveButton,runButton,fetchTitleButton;
 
   public static void main(String args[]) {
     SwingUtilities.invokeLater(() -> new Runner().initUI());
@@ -32,7 +34,7 @@ public class Runner {
 
   private void initUI() {
     frame = new JFrame("ニコ生ダウンロードコマンド生成ツール");
-    frame.setSize(700, 600);// サイズを同時に指定する(場所と同時はsetBounds)
+    frame.setSize(735, 600);// サイズを指定する(場所と同時はsetBounds)
     frame.setLocationRelativeTo(null);// 常に中央に配置
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);// Xを押した時にアプリも終了する設定
     frame.setLayout(new BorderLayout());// フレームで使用されるレイアウトマネージャーを変更
@@ -106,15 +108,18 @@ public class Runner {
     ffmpegCheck.addItemListener(checkBoxListener);
     deleteTemp.addItemListener(checkBoxListener);
 
-    JButton chooseButton = new JButton("パス選択");
+    chooseButton = new JButton("パス選択");
     chooseButton.addActionListener(e -> chooseFolder());// パス選択アクションの呼び出し
 
-    JButton saveButton = new JButton("ユーザーセッションとパスの保存");
+    saveButton = new JButton("ユーザーセッションとパスの保存");
     saveButton.addActionListener(
         e -> SaveService.saveDataServie(usersessionField.getText().trim(), pathField.getText().trim()));// 実行アクションの呼び出し
 
-    JButton runButton = new JButton("実行");
+    runButton = new JButton("実行");
     runButton.addActionListener(e -> executeCommand().execute());// 実行アクションの呼び出し
+
+    fetchTitleButton = new JButton("URLから取得する");
+    fetchTitleButton.addActionListener(e -> fetchTitle(urlField.getText()));
 
     JPanel formpanel = new JPanel(new MigLayout("", "[right][grow]", "[][][]"));
     formpanel.add(new JLabel("URL："));
@@ -122,7 +127,8 @@ public class Runner {
     formpanel.add(new JLabel("ユーザーセッション："));
     formpanel.add(usersessionField, "wrap");
     formpanel.add(new JLabel("ファイル名："));
-    formpanel.add(filenameField, "wrap");
+    formpanel.add(filenameField);
+    formpanel.add(fetchTitleButton,"wrap");
     formpanel.add(new JLabel("保存先："));
     formpanel.add(pathField);
     formpanel.add(chooseButton, "wrap");
@@ -173,6 +179,13 @@ public class Runner {
     if (chooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
       File selectedFolder = chooser.getSelectedFile();
       pathField.setText(selectedFolder.getAbsolutePath());
+    }
+  }
+
+  private void fetchTitle(String url){
+    Optional<String> titleOpt = FileNameService.fetchTitle(frame, url);
+    if(titleOpt.isPresent()){
+      filenameField.setText(titleOpt.get());
     }
   }
 
