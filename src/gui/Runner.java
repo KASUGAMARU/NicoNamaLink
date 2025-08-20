@@ -35,6 +35,7 @@ public class Runner {
   private void initUI() {
     frame = new JFrame("ニコ生ダウンロードコマンド生成ツール");
     frame.setSize(735, 600);// サイズを指定する(場所と同時はsetBounds)
+    frame.setResizable(false);//サイズ変更禁止
     frame.setLocationRelativeTo(null);// 常に中央に配置
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);// Xを押した時にアプリも終了する設定
     frame.setLayout(new BorderLayout());// フレームで使用されるレイアウトマネージャーを変更
