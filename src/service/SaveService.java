@@ -10,7 +10,7 @@ public class SaveService {
     public static void saveDataServie(String session, String path) {
         Settings settings = new Settings(session, path);
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        try (FileWriter writer = new FileWriter("data/saves.json")) {
+        try (FileWriter writer = new FileWriter(PathProviderService.getSaveFilePath().toFile())) {
             gson.toJson(settings, writer);
         } catch (IOException e) {
             e.printStackTrace();
